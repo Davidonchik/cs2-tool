@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS2 Tool - Серверы</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Экран ввода API ключа -->
+    <div class="api-screen" id="apiScreen">
+        <div class="api-container">
+            <div class="api-header">
+                <div class="logo">
+                    <i class="fas fa-gamepad"></i>
+                    <span>CS2 Tool</span>
+                </div>
+                <h2>Добро пожаловать в CS2 Tool</h2>
+                <p>Для работы с приложением необходимо ввести Steam Web API ключ</p>
+            </div>
+            
+            <form class="api-form" id="apiForm">
+                <div class="form-group">
+                    <label for="apiKey">Steam Web API Key</label>
+                    <input type="password" id="apiKey" placeholder="Введите ваш API ключ" class="api-input" required>
+                    <div class="input-hint">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Ключ будет сохранен локально в вашем браузере</span>
+                    </div>
+                </div>
+                
+                <button type="button" class="api-submit-btn" id="apiSubmitBtn">
+                    <i class="fas fa-key"></i>
+                    Начать работу
+                </button>
+            </form>
+                
+                <div class="api-help">
+                    <h3>Как получить Steam Web API ключ?</h3>
+                    <ol>
+                        <li>Перейдите на <a href="https://steamcommunity.com/dev/apikey" target="_blank">https://steamcommunity.com/dev/apikey</a></li>
+                        <li>Войдите в свой Steam аккаунт</li>
+                        <li>В поле "Domain Name" введите: <code>localhost</code></li>
+                        <li>Примите условия использования</li>
+                        <li>Нажмите "Register" для получения ключа</li>
+                        <li>Скопируйте полученный ключ и вставьте его выше</li>
+                    </ol>
+                    <div class="api-note">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Важно:</strong> Используйте <code>localhost</code> в качестве домена, так как это локальное приложение
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Контейнер для уведомлений -->
+    <div class="notifications-container" id="notificationsContainer"></div>
+    
+    <div class="app-container" id="mainApp" style="display: none;">
+        <!-- Боковая панель -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-gamepad"></i>
+                    <span>CS2 Tool</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-section="servers">
+                    <i class="fas fa-home"></i>
+                    <span>Серверы</span>
+                </a>
+                <a href="#" class="nav-item" data-section="game-servers">
+                    <i class="fas fa-gamepad"></i>
+                    <span>Игровые серверы</span>
+                </a>
+                <a href="#" class="nav-item" data-section="empty-servers">
+                    <i class="fas fa-ghost"></i>
+                    <span>Пустые серверы</span>
+                </a>
+                <a href="#" class="nav-item" data-section="saved-servers">
+                    <i class="fas fa-bookmark"></i>
+                    <span>Сохраненные серверы</span>
+                </a>
+                <a href="#" class="nav-item" data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Настройки</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Основной контент -->
+        <div class="main-content">
+            <!-- Заголовок -->
+            <header class="header">
+                <div class="header-left">
+                    <h1>CS2 Сервер Трекер</h1>
+                                            <div class="tracker-info">
+                            <span>Отслеживание серверов, перешедших на graphics_settings</span>
+                        </div>
+                </div>
+                
+                <div class="header-right">
+                    <div class="window-controls">
+                        <button class="control-btn minimize" id="minimizeBtn">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button class="control-btn maximize" id="maximizeBtn">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                        <button class="control-btn close" id="closeBtn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Контент -->
+            <div class="content">
+                <!-- Секция серверов -->
+                <div class="section active" id="servers-section">
+                    <div class="servers-container">
+                        <div class="servers-header">
+                            <div class="servers-info">
+                                <span class="servers-count">Загрузка серверов...</span>
+                                <div class="auto-scan-info">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Непрерывное сканирование</span>
+                                </div>
+                            </div>
+                            <div class="servers-actions">
+                                <div class="auto-connect-toggle">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="autoConnectToggle">
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span class="toggle-label">Автоподключение</span>
+                                </div>
+                                <button class="cleanup-btn" id="cleanupBtn" title="Принудительная очистка списка исчезнувших серверов">
+                                    <i class="fas fa-broom"></i>
+                                    Очистить
+                                </button>
+                                <button class="refresh-btn" id="refreshBtn" title="Принудительное обновление данных от сканера">
+                                    <i class="fas fa-sync-alt"></i>
+                                    Обновить
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="servers-list" id="serversList">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <p>Загрузка серверов...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Секция игровых серверов -->
+                <div class="section" id="game-servers-section">
+                    <div class="servers-container">
+                        <div class="servers-header">
+                            <div class="servers-info">
+                                <span class="servers-count">Игровые серверы (все карты кроме graphics_settings)</span>
+                                <div class="auto-scan-info">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Загружается при переходе</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="servers-list" id="gameServersList">
+                            <div class="loading">
+                                <i class="fas fa-gamepad" style="font-size: 48px; color: #64ffda; margin-bottom: 20px;"></i>
+                                <p>Перейдите в секцию для загрузки игровых серверов</p>
+                                <p style="font-size: 12px; color: #888;">Все серверы с обычными картами</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Секция пустых серверов -->
+                <div class="section" id="empty-servers-section">
+                    <div class="servers-container">
+                        <div class="servers-header">
+                            <div class="servers-info">
+                                <span class="servers-count">Пустые серверы (graphics_settings)</span>
+                                <div class="auto-scan-info">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Загружается при переходе</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="servers-list" id="emptyServersList">
+                            <div class="loading">
+                                <i class="fas fa-ghost" style="font-size: 48px; color: #64ffda; margin-bottom: 20px;"></i>
+                                <p>Перейдите в секцию для загрузки пустых серверов</p>
+                                <p style="font-size: 12px; color: #888;">Серверы с картой graphics_settings</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Секция сохраненных серверов -->
+                <div class="section" id="saved-servers-section">
+                    <div class="saved-servers-container">
+                        <div class="saved-servers-header">
+                            <h2>Сохраненные серверы</h2>
+                            <div class="saved-servers-stats">
+                                <div class="stats-item">
+                                    <span class="stats-label">Всего серверов:</span>
+                                    <span class="stats-value" id="totalSavedServers">0</span>
+                                </div>
+                                <div class="stats-item">
+                                    <span class="stats-label">Автосохранено:</span>
+                                    <span class="stats-value" id="autoSavedServers">0</span>
+                                </div>
+                                <div class="stats-item">
+                                    <span class="stats-label">Топ смен карт:</span>
+                                    <span class="stats-value" id="topMapChanges">0</span>
+                                </div>
+                            </div>
+
+                        </div>
+                        
+                        <div class="saved-servers-list" id="savedServersList">
+                            <div class="empty-state">
+                                <i class="fas fa-bookmark" style="font-size: 48px; color: #64ffda; margin-bottom: 20px;"></i>
+                                <p>Нет сохраненных серверов</p>
+                                <p style="font-size: 12px; color: #888;">Добавьте серверы для быстрого доступа</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Секция настроек -->
+                <div class="section" id="settings-section">
+                                    <div class="settings-container">
+                    <h2>Настройки</h2>
+                    <div class="settings-group">
+                        <label>Steam Web API Key</label>
+                        <div class="api-key-group">
+                            <input type="password" id="apiKeySetting" placeholder="Введите API ключ" class="api-key-input">
+                            <button class="change-api-btn" id="changeApiBtn">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </div>
+                                                   <div class="settings-group">
+                                   <label>Автоматическое сканирование</label>
+                                   <div class="info-text">
+                                       <span>Скрипт непрерывно сканирует серверы в фоновом режиме</span>
+                                   </div>
+                               </div>
+                    <div class="settings-group">
+                        <label>Регион</label>
+                        <select id="regionSelect">
+                            <option value="44">Европа</option>
+                            <option value="45">Азия</option>
+                            <option value="46">Америка</option>
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label>Количество потоков</label>
+                        <input type="number" id="maxThreads" value="10" min="1" max="20">
+                        <small style="color: #888; font-size: 12px;">Больше потоков = быстрее сканирование, но больше нагрузка</small>
+                    </div>
+                    <div class="settings-group">
+                        <label>Автосохранение серверов</label>
+                        <div class="auto-save-settings">
+                            <input type="number" id="autoSaveThreshold" value="3" min="1" max="10">
+                            <span style="color: #888; font-size: 12px;">смен карт</span>
+                        </div>
+                        <small style="color: #888; font-size: 12px;">Серверы автоматически сохраняются после указанного количества смен карт</small>
+                    </div>
+                    <div class="settings-group">
+                        <label>Дополнительные функции</label>
+                        <button class="admin-login-btn" id="adminLoginBtn">
+                            <i class="fas fa-user-shield"></i>
+                            Расширенные настройки
+                        </button>
+                        <small style="color: #888; font-size: 12px;">Дополнительные функции для администраторов</small>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Панель выбора карт (справа) -->
+        <div class="maps-panel" id="mapsPanel">
+            <div class="maps-header">
+                <h3><i class="fas fa-map"></i> Карты для сканирования</h3>
+                <div class="maps-controls">
+                    <button class="maps-btn" id="selectAllMaps">
+                        <i class="fas fa-check-double"></i>
+                        Все
+                    </button>
+                    <button class="maps-btn" id="deselectAllMaps">
+                        <i class="fas fa-times"></i>
+                        Ни одной
+                    </button>
+                </div>
+                <div class="maps-controls" style="margin-top: 10px;">
+                    <button class="maps-btn maps-btn-popular" id="selectPopularMaps">
+                        <i class="fas fa-star"></i>
+                        Популярные
+                    </button>
+                </div>
+            </div>
+            <div class="maps-list" id="mapsList">
+                <!-- Карты будут добавлены через JavaScript -->
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Модальное окно для входа администратора -->
+    <div class="modal" id="adminModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Вход администратора</h3>
+                <button class="modal-close" id="adminModalClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="adminForm">
+                    <div class="form-group">
+                        <label for="adminPassword">Пароль администратора</label>
+                        <input type="password" id="adminPassword" placeholder="Введите пароль" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="adminModalCancel">Отмена</button>
+                <button class="btn-primary" id="adminModalLogin">Войти</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- Аудио для уведомлений -->
+    <audio id="serverFoundSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT" type="audio/wav">
+    </audio>
+    
+    <script src="sounds.js"></script>
+    <script src="app.js"></script>
+</body>
+</html> 
