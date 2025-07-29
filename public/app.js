@@ -5,6 +5,7 @@ class CS2Tool {
         this.gameServers = new Map();
         this.emptyServers = new Map();
         this.serverHistory = new Map();
+        this.savedServers = new Map();
         this.isLoading = false;
         this.autoRefresh = true;
         this.region = '44';
@@ -38,7 +39,7 @@ class CS2Tool {
         this.loadSettings();
         this.checkApiKey();
         if (this.useNativeScanner) {
-            this.initWebSocket();
+            this.initAPI();
         }
         this.initMapsSelector();
         console.log('✅ Инициализация завершена');
@@ -599,6 +600,39 @@ class CS2Tool {
         
         serversCount.textContent = `Исчезнувших серверов: ${this.servers.size} | Отслеживается: ${this.serverHistory.size}`;
     }
+    
+    updateServersList(servers, type = 'all') {
+        // Обновляем соответствующий список серверов
+        if (type === 'all') {
+            this.servers.clear();
+            servers.forEach(server => {
+                this.servers.set(server.ip + ':' + server.port, server);
+            });
+            this.updateServersDisplay();
+        } else if (type === 'game') {
+            this.gameServers.clear();
+            servers.forEach(server => {
+                this.gameServers.set(server.ip + ':' + server.port, server);
+            });
+            this.updateGameServersDisplay();
+        } else if (type === 'empty') {
+            this.emptyServers.clear();
+            servers.forEach(server => {
+                this.emptyServers.set(server.ip + ':' + server.port, server);
+            });
+            this.updateEmptyServersDisplay();
+        }
+    }
+    
+    updateSavedServersList(savedServers) {
+        // Обновляем список сохраненных серверов
+        this.savedServers = new Map();
+        savedServers.forEach(server => {
+            const key = server.ip + ':' + server.port;
+            this.savedServers.set(key, server);
+        });
+        this.updateSavedServersDisplay();
+    }
 
     createServerCard(server) {
         const card = document.createElement('div');
@@ -1046,79 +1080,124 @@ class CS2Tool {
         }
     }
     
-    initWebSocket() {
+    initAPI() {
         try {
-            console.log('🔌 Попытка подключения к нативному сканеру...');
+            console.log('🔌 Инициализация HTTP API...');
             
-            // Определяем WebSocket URL в зависимости от окружения
+            // Определяем базовый URL для API
             const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            
-            let wsUrl;
             if (isLocalhost) {
-                wsUrl = 'ws://localhost:8765';
+                this.apiBaseUrl = 'http://localhost:8000';
             } else {
-                // Для Railway используем тот же хост, но другой порт
-                const hostname = window.location.hostname;
-                // Если это Railway, используем тот же домен
-                if (hostname.includes('railway') || hostname.includes('up.railway.app')) {
-                    wsUrl = `${wsProtocol}//${hostname}:8765`;
-                } else {
-                    // Для других хостингов
-                    wsUrl = `${wsProtocol}//${hostname}:8765`;
-                }
+                this.apiBaseUrl = `${window.location.protocol}//${window.location.hostname}`;
             }
             
-            console.log(`🔌 Подключение к WebSocket: ${wsUrl}`);
-            this.websocket = new WebSocket(wsUrl);
+            console.log(`🔌 API базовый URL: ${this.apiBaseUrl}`);
+            this.isConnected = true;
+            this.useNativeScanner = true;
+            this.showNotification('HTTP API подключен', 'success');
             
-            this.websocket.onopen = () => {
-                console.log('🔌 WebSocket соединение установлено');
-                this.isConnected = true;
-                this.useNativeScanner = true;
-                this.showNotification('Подключение к нативному сканеру установлено', 'success');
-                
-                if (this.apiKey) {
-                    console.log('🔑 Отправка API ключа нативному сканеру...');
-                    this.sendWebSocketMessage('set_api_key', { api_key: this.apiKey });
-                } else {
-                    console.warn('⚠️ API ключ не найден, нативный сканер не запустится');
-                    this.showNotification('API ключ не найден. Перейдите в настройки.', 'warning');
-                }
-            };
-            
-            this.websocket.onmessage = (event) => {
-                console.log('📨 Получено WebSocket сообщение:', event.data);
-                try {
-                    const data = JSON.parse(event.data);
-                    this.handleWebSocketMessage(data);
-                } catch (error) {
-                    console.error('❌ Ошибка парсинга WebSocket сообщения:', error);
-                }
-            };
-            
-            this.websocket.onclose = () => {
-                console.log('🔌 WebSocket соединение закрыто');
-                this.isConnected = false;
-                this.showNotification('Соединение с нативным сканером потеряно', 'warning');
-                
-                setTimeout(() => {
-                    if (this.useNativeScanner) {
-                        this.initWebSocket();
-                    }
-                }, 5000);
-            };
-            
-            this.websocket.onerror = (error) => {
-                console.error('❌ WebSocket ошибка:', error);
-                this.isConnected = false;
-                this.showNotification('Ошибка подключения к нативному сканеру', 'error');
-            };
+            // Запускаем периодическое обновление данных
+            this.startDataPolling();
             
         } catch (error) {
-            console.error('❌ Ошибка инициализации WebSocket:', error);
+            console.error('❌ Ошибка инициализации HTTP API:', error);
             this.useNativeScanner = false;
-            this.showNotification('Нативный сканер недоступен, используется браузерный режим', 'warning');
+            this.showNotification('HTTP API недоступен, используется браузерный режим', 'warning');
+        }
+    }
+    
+    startDataPolling() {
+        // Обновляем данные каждые 5 секунд
+        this.pollingInterval = setInterval(() => {
+            this.fetchServers();
+            this.fetchSavedServers();
+        }, 5000);
+        
+        // Первоначальная загрузка
+        this.fetchServers();
+        this.fetchSavedServers();
+    }
+    
+    async fetchServers(type = 'all') {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/servers?type=${type}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+            if (data.servers) {
+                this.updateServersList(data.servers, type);
+            }
+        } catch (error) {
+            console.error('❌ Ошибка получения серверов:', error);
+            this.isConnected = false;
+        }
+    }
+    
+    async fetchSavedServers() {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/saved-servers`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+            if (data.saved_servers) {
+                this.updateSavedServersList(data.saved_servers);
+            }
+        } catch (error) {
+            console.error('❌ Ошибка получения сохраненных серверов:', error);
+        }
+    }
+    
+    async startScanning() {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/scan`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+            this.showNotification(data.message || 'Сканирование запущено', 'success');
+        } catch (error) {
+            console.error('❌ Ошибка запуска сканирования:', error);
+            this.showNotification('Ошибка запуска сканирования', 'error');
+        }
+    }
+    
+    async updateSettings(settings) {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/update-settings`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(settings)
+            });
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+            this.showNotification(data.message || 'Настройки обновлены', 'success');
+        } catch (error) {
+            console.error('❌ Ошибка обновления настроек:', error);
+            this.showNotification('Ошибка обновления настроек', 'error');
+        }
+    }
+    
+    async clearCache() {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/clear-cache`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+            this.showNotification(data.message || 'Кэш очищен', 'success');
+            
+            // Обновляем списки
+            this.fetchServers();
+            this.fetchSavedServers();
+        } catch (error) {
+            console.error('❌ Ошибка очистки кэша:', error);
+            this.showNotification('Ошибка очистки кэша', 'error');
         }
     }
     
