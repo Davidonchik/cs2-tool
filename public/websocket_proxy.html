@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CS2 Tool - WebSocket Proxy</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a2e;
+            color: #ffffff;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .connected { background: #4CAF50; }
+        .disconnected { background: #f44336; }
+        .connecting { background: #ff9800; }
+    </style>
+</head>
+<body>
+    <h1>CS2 Tool - WebSocket Proxy</h1>
+    <div id="status" class="status disconnected">Отключено</div>
+    <div id="messages"></div>
+
+    <script>
+        let ws = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        function updateStatus(status, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = 'status ' + status;
+            statusEl.textContent = message;
+        }
+
+        function addMessage(message) {
+            const messagesEl = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function connect() {
+            try {
+                updateStatus('connecting', 'Подключение...');
+                
+                // Определяем WebSocket URL
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const hostname = window.location.hostname;
+                const wsUrl = `${protocol}//${hostname}:8765`;
+                
+                addMessage('Подключение к: ' + wsUrl);
+                
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = function() {
+                    updateStatus('connected', 'Подключено');
+                    addMessage('WebSocket соединение установлено');
+                    reconnectAttempts = 0;
+                };
+                
+                ws.onmessage = function(event) {
+                    addMessage('Получено: ' + event.data);
+                };
+                
+                ws.onclose = function() {
+                    updateStatus('disconnected', 'Отключено');
+                    addMessage('WebSocket соединение закрыто');
+                    
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        addMessage(`Попытка переподключения ${reconnectAttempts}/${maxReconnectAttempts}...`);
+                        setTimeout(connect, 2000);
+                    } else {
+                        addMessage('Превышено количество попыток переподключения');
+                    }
+                };
+                
+                ws.onerror = function(error) {
+                    addMessage('Ошибка WebSocket: ' + error);
+                };
+                
+            } catch (error) {
+                addMessage('Ошибка подключения: ' + error);
+                updateStatus('disconnected', 'Ошибка подключения');
+            }
+        }
+
+        // Автоматическое подключение при загрузке страницы
+        window.onload = function() {
+            connect();
+        };
+
+        // Переподключение при восстановлении соединения
+        window.addEventListener('online', function() {
+            addMessage('Соединение восстановлено, переподключение...');
+            connect();
+        });
+    </script>
+</body>
+</html> 

@@ -1058,9 +1058,15 @@ class CS2Tool {
             if (isLocalhost) {
                 wsUrl = 'ws://localhost:8765';
             } else {
-                // Для Railway или других хостингов
+                // Для Railway используем тот же хост, но другой порт
                 const hostname = window.location.hostname;
-                wsUrl = `${wsProtocol}//${hostname}:8765`;
+                // Если это Railway, используем тот же домен
+                if (hostname.includes('railway') || hostname.includes('up.railway.app')) {
+                    wsUrl = `${wsProtocol}//${hostname}:8765`;
+                } else {
+                    // Для других хостингов
+                    wsUrl = `${wsProtocol}//${hostname}:8765`;
+                }
             }
             
             console.log(`🔌 Подключение к WebSocket: ${wsUrl}`);
