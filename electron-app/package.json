@@ -1,0 +1,54 @@
+{
+  "name": "cs2-tool-app",
+  "version": "1.0.0",
+  "description": "CS2 Tool - Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "build-mac": "electron-builder --mac",
+    "build-linux": "electron-builder --linux"
+  },
+  "keywords": ["cs2", "counter-strike", "server-scanner", "gaming"],
+  "author": "Davidonchik",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "build": {
+    "appId": "com.davidonchik.cs2tool",
+    "productName": "CS2 Tool",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "public/**/*",
+      "api_server.py",
+      "scanner_simple.py",
+      "requirements.txt",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+} 
