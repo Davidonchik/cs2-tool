@@ -12,6 +12,8 @@ import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 import requests
+import urllib.request
+import urllib.parse
 from scanner_simple import CS2ScannerSimple
 
 # Настройка логирования
