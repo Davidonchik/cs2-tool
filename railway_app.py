@@ -65,32 +65,38 @@ class RailwayApp:
         except Exception as e:
             logger.error(f"❌ Ошибка запуска HTTP сервера: {e}")
     
-    async def start_websocket_server(self):
-        """Запуск WebSocket сервера"""
+    def start_websocket_server_background(self):
+        """Запуск WebSocket сервера в фоновом режиме"""
         try:
             import websockets
+            import asyncio
             
-            # Создаем сканер
-            self.scanner = CS2ScannerSimple(max_workers=10)
+            async def run_websocket():
+                try:
+                    # Запускаем WebSocket сервер
+                    host = '0.0.0.0'
+                    self.websocket_server = await websockets.serve(
+                        self.scanner.handle_websocket, 
+                        host, 
+                        self.websocket_port, 
+                        ping_interval=None, 
+                        ping_timeout=None
+                    )
+                    
+                    logger.info(f"🔌 WebSocket сервер запущен на ws://{host}:{self.websocket_port}")
+                    
+                    # Держим WebSocket сервер запущенным
+                    await self.websocket_server.wait_closed()
+                    
+                except Exception as e:
+                    logger.error(f"❌ Ошибка запуска WebSocket сервера: {e}")
             
-            # Запускаем WebSocket сервер
-            host = '0.0.0.0'
-            self.websocket_server = await websockets.serve(
-                self.scanner.handle_websocket, 
-                host, 
-                self.websocket_port, 
-                ping_interval=None, 
-                ping_timeout=None
-            )
+            # Запускаем WebSocket в отдельном потоке
+            def run_async():
+                asyncio.run(run_websocket())
             
-            logger.info(f"🔌 WebSocket сервер запущен на ws://{host}:{self.websocket_port}")
-            
-            # Запускаем сканирование
-            self.scanner.start_scanning()
-            logger.info("🚀 Сканирование серверов запущено")
-            
-            # Держим WebSocket сервер запущенным
-            await self.websocket_server.wait_closed()
+            websocket_thread = threading.Thread(target=run_async, daemon=True)
+            websocket_thread.start()
             
         except Exception as e:
             logger.error(f"❌ Ошибка запуска WebSocket сервера: {e}")
@@ -105,13 +111,17 @@ class RailwayApp:
         print("⏹️  Нажмите Ctrl+C для остановки")
         print()
         
-        # Запускаем HTTP сервер в отдельном потоке
-        http_thread = threading.Thread(target=self.start_http_server, daemon=True)
-        http_thread.start()
+        # Создаем и запускаем сканер
+        self.scanner = CS2ScannerSimple(max_workers=10)
+        self.scanner.start_scanning()
+        logger.info("🚀 Сканирование серверов запущено")
         
-        # Запускаем WebSocket сервер в основном потоке
+        # Запускаем WebSocket сервер в фоновом режиме
+        self.start_websocket_server_background()
+        
+        # Запускаем HTTP сервер в основном потоке (для healthcheck)
         try:
-            asyncio.run(self.start_websocket_server())
+            self.start_http_server()
         except KeyboardInterrupt:
             print("\n🛑 Остановка приложения...")
             if self.http_server:
