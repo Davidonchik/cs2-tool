@@ -33,8 +33,10 @@ def start_http_server(port=8000):
         public_dir = os.path.join(current_dir, 'public')
         os.chdir(public_dir)
         
-        server = HTTPServer(('localhost', port), CORSRequestHandler)
-        print(f"🌐 HTTP сервер запущен на http://localhost:{port}")
+        # Для Railway используем 0.0.0.0 вместо localhost
+        host = '0.0.0.0'
+        server = HTTPServer((host, port), CORSRequestHandler)
+        print(f"🌐 HTTP сервер запущен на http://{host}:{port}")
         print(f"📁 Обслуживаемые файлы: {os.getcwd()}")
         print("⏹️  Нажмите Ctrl+C для остановки")
         print()

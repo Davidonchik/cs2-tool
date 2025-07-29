@@ -1043,7 +1043,7 @@ async def main():
 
     try:
         # Запускаем WebSocket сервер с обработкой ошибок
-        async with websockets.serve(scanner.handle_websocket, "localhost", args.port, ping_interval=None, ping_timeout=None):
+        async with websockets.serve(scanner.handle_websocket, "0.0.0.0", args.port, ping_interval=None, ping_timeout=None):
             logger.info(f"🔌 WebSocket сервер запущен на порту {args.port}")
             
             # Запускаем сканирование

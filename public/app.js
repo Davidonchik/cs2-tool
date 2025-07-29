@@ -1049,7 +1049,22 @@ class CS2Tool {
     initWebSocket() {
         try {
             console.log('🔌 Попытка подключения к нативному сканеру...');
-            this.websocket = new WebSocket('ws://localhost:8765');
+            
+            // Определяем WebSocket URL в зависимости от окружения
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            
+            let wsUrl;
+            if (isLocalhost) {
+                wsUrl = 'ws://localhost:8765';
+            } else {
+                // Для Railway или других хостингов
+                const hostname = window.location.hostname;
+                wsUrl = `${wsProtocol}//${hostname}:8765`;
+            }
+            
+            console.log(`🔌 Подключение к WebSocket: ${wsUrl}`);
+            this.websocket = new WebSocket(wsUrl);
             
             this.websocket.onopen = () => {
                 console.log('🔌 WebSocket соединение установлено');
